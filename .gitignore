@@ -1,1 +1,23 @@
 .claude
+
+# Firebase / Google Cloud — server-side secrets (never commit these)
+**/*-firebase-adminsdk-*.json
+**/service-account*.json
+**/serviceAccountKey*.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Android signing (keep release keys out of git)
+**/key.properties
+**/*.jks
+**/*.keystore
+
+# iOS signing
+**/*.p12
+**/*.mobileprovision
+
+# RevenueCat & other private API keys
+**/secrets.dart

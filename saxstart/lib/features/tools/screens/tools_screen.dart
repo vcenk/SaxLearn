@@ -290,78 +290,64 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
                       beginnerNotes[_selectedNoteIndex].name,
                       style: AppTypography.displayLarge,
                     ),
-                    const SizedBox(height: 20),
-                    // Key diagram
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Left hand keys (0-2)
-                        ...List.generate(3, (i) {
-                          final pressed =
-                              beginnerNotes[_selectedNoteIndex].keys[i];
-                          return Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: pressed
-                                    ? AppColors.gold
-                                    : Colors.transparent,
-                                border: Border.all(
-                                  color: pressed
-                                      ? AppColors.gold
-                                      : AppColors.textDisabled,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                        const SizedBox(width: 16),
-                        // Right hand keys (3-6)
-                        ...List.generate(4, (i) {
-                          final pressed =
-                              beginnerNotes[_selectedNoteIndex].keys[i + 3];
-                          return Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: pressed
-                                    ? AppColors.gold
-                                    : Colors.transparent,
-                                border: Border.all(
-                                  color: pressed
-                                      ? AppColors.gold
-                                      : AppColors.textDisabled,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
                     const SizedBox(height: 8),
+                    Text(
+                      'Alto Saxophone',
+                      style: AppTypography.label,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Two-column fingering chart (LH / RH)
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('L', style: AppTypography.caption),
-                        const SizedBox(width: 100),
-                        Text('R', style: AppTypography.caption),
+                        Expanded(
+                          child: _HandColumn(
+                            label: 'LEFT HAND',
+                            keys: beginnerNotes[_selectedNoteIndex]
+                                .keys
+                                .sublist(0, 3),
+                            fingerLabels: const ['1', '2', '3'],
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 180,
+                          color: AppColors.borderGold,
+                        ),
+                        Expanded(
+                          child: _HandColumn(
+                            label: 'RIGHT HAND',
+                            keys: beginnerNotes[_selectedNoteIndex]
+                                .keys
+                                .sublist(3, 7),
+                            fingerLabels: const ['1', '2', '3', '4'],
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      beginnerNotes[_selectedNoteIndex].tip,
-                      style: AppTypography.bodySmall,
-                      textAlign: TextAlign.center,
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lightbulb_outline_rounded,
+                              color: AppColors.gold, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              beginnerNotes[_selectedNoteIndex].tip,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     // Play note button
@@ -402,6 +388,75 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Vertical column showing a hand's fingers stacked top-to-bottom,
+/// with pressed keys filled gold and unpressed as hollow gold rings.
+class _HandColumn extends StatelessWidget {
+  final String label;
+  final List<bool> keys;
+  final List<String> fingerLabels;
+
+  const _HandColumn({
+    required this.label,
+    required this.keys,
+    required this.fingerLabels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: AppTypography.label),
+        const SizedBox(height: 12),
+        ...List.generate(keys.length, (i) {
+          final pressed = keys[i];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: pressed ? AppColors.gold : Colors.transparent,
+                    border: Border.all(
+                      color: pressed
+                          ? AppColors.gold
+                          : AppColors.textDisabled,
+                      width: 2,
+                    ),
+                    boxShadow: pressed
+                        ? [
+                            BoxShadow(
+                              color:
+                                  AppColors.gold.withValues(alpha: 0.4),
+                              blurRadius: 8,
+                            ),
+                          ]
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  fingerLabels[i],
+                  style: AppTypography.bodySmall.copyWith(
+                    color: pressed
+                        ? AppColors.gold
+                        : AppColors.textDisabled,
+                    fontWeight:
+                        pressed ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

@@ -111,17 +111,66 @@ class _DrillScreenState extends ConsumerState<DrillScreen>
 
   void _generateDemoScore() {
     final rng = Random();
-    _pitchScore = 60 + rng.nextInt(40);
-    _stabilityScore = 50 + rng.nextInt(50);
-    _sustainScore = 65 + rng.nextInt(35);
-    _attackScore = 55 + rng.nextInt(45);
+
+    // Simulate 4 performance tiers: rough, shaky, solid, excellent.
+    // Gives users visibly different experiences on each try until real
+    // pitch detection is wired up.
+    final tier = rng.nextInt(4);
+
+    switch (tier) {
+      case 0: // rough first attempt
+        _pitchScore = 35 + rng.nextInt(25); // 35-60
+        _stabilityScore = 30 + rng.nextInt(30); // 30-60
+        _sustainScore = 40 + rng.nextInt(30); // 40-70
+        _attackScore = 35 + rng.nextInt(35); // 35-70
+        break;
+      case 1: // shaky but okay
+        _pitchScore = 55 + rng.nextInt(20);
+        _stabilityScore = 50 + rng.nextInt(20);
+        _sustainScore = 60 + rng.nextInt(25);
+        _attackScore = 55 + rng.nextInt(25);
+        break;
+      case 2: // solid
+        _pitchScore = 72 + rng.nextInt(15);
+        _stabilityScore = 70 + rng.nextInt(20);
+        _sustainScore = 78 + rng.nextInt(15);
+        _attackScore = 70 + rng.nextInt(20);
+        break;
+      case 3: // excellent
+        _pitchScore = 88 + rng.nextInt(12);
+        _stabilityScore = 85 + rng.nextInt(15);
+        _sustainScore = 90 + rng.nextInt(10);
+        _attackScore = 82 + rng.nextInt(18);
+        break;
+    }
+
     _overallScore = ScoreCalculator.overallScore(
       pitch: _pitchScore,
       stability: _stabilityScore,
       sustain: _sustainScore,
       attack: _attackScore,
     );
-    _feedback = ScoreCalculator.pitchFeedback(_pitchScore);
+
+    // Pick feedback from the lowest-scoring component — actually useful advice
+    final scores = {
+      'pitch': _pitchScore,
+      'stability': _stabilityScore,
+      'sustain': _sustainScore,
+    };
+    final weakest =
+        scores.entries.reduce((a, b) => a.value < b.value ? a : b);
+
+    switch (weakest.key) {
+      case 'pitch':
+        _feedback = ScoreCalculator.pitchFeedback(_pitchScore);
+        break;
+      case 'stability':
+        _feedback = ScoreCalculator.stabilityFeedback(_stabilityScore);
+        break;
+      case 'sustain':
+        _feedback = ScoreCalculator.sustainFeedback(_sustainScore);
+        break;
+    }
   }
 
   void _reset() {
