@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/firestore_sync.dart';
+import '../../../data/repositories/progress_repository.dart';
+import '../../../data/repositories/user_repository.dart';
+import '../../../features/onboarding/providers/onboarding_provider.dart';
 import '../../../shared/widgets/gold_button.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -133,7 +137,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       : await notifier.signInWithEmail(email, password);
                   if (!context.mounted) return;
                   setState(() => _isLoading = false);
-                  if (ok) context.go('/home');
+                  if (ok) {
+                    // Create Firestore user document if onboarding is done
+                    await createUserOnOnboardingComplete(
+                      auth: ref.read(authProvider),
+                      onboarding: ref.read(onboardingProvider),
+                      userRepo: ref.read(userRepositoryProvider),
+                      progressRepo: ref.read(progressRepositoryProvider),
+                    );
+                    if (!context.mounted) return;
+                    context.go('/home');
+                  }
                 },
               ),
               const SizedBox(height: 16),
@@ -178,7 +192,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 onTap: () async {
                   final ok =
                       await ref.read(authProvider.notifier).signInWithGoogle();
-                  if (ok && context.mounted) context.go('/home');
+                  if (ok && context.mounted) {
+                    await createUserOnOnboardingComplete(
+                      auth: ref.read(authProvider),
+                      onboarding: ref.read(onboardingProvider),
+                      userRepo: ref.read(userRepositoryProvider),
+                      progressRepo: ref.read(progressRepositoryProvider),
+                    );
+                    if (!context.mounted) return;
+                    context.go('/home');
+                  }
                 },
               ),
               const SizedBox(height: 12),
@@ -188,7 +211,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 onTap: () async {
                   final ok =
                       await ref.read(authProvider.notifier).signInWithApple();
-                  if (ok && context.mounted) context.go('/home');
+                  if (ok && context.mounted) {
+                    await createUserOnOnboardingComplete(
+                      auth: ref.read(authProvider),
+                      onboarding: ref.read(onboardingProvider),
+                      userRepo: ref.read(userRepositoryProvider),
+                      progressRepo: ref.read(progressRepositoryProvider),
+                    );
+                    if (!context.mounted) return;
+                    context.go('/home');
+                  }
                 },
               ),
               const SizedBox(height: 24),
@@ -200,7 +232,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     final ok = await ref
                         .read(authProvider.notifier)
                         .continueAsGuest();
-                    if (ok && context.mounted) context.go('/home');
+                    if (ok && context.mounted) {
+                      await createUserOnOnboardingComplete(
+                      auth: ref.read(authProvider),
+                      onboarding: ref.read(onboardingProvider),
+                      userRepo: ref.read(userRepositoryProvider),
+                      progressRepo: ref.read(progressRepositoryProvider),
+                    );
+                      if (!context.mounted) return;
+                      context.go('/home');
+                    }
                   },
                   child: Text(
                     'Continue as guest',

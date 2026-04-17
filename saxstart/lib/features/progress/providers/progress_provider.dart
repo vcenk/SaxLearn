@@ -4,6 +4,16 @@ import '../../../data/models/progress_model.dart';
 class ProgressNotifier extends StateNotifier<ProgressModel> {
   ProgressNotifier() : super(const ProgressModel());
 
+  /// Replace current state with data loaded from Firestore.
+  void hydrate(ProgressModel loaded) {
+    state = loaded;
+  }
+
+  /// Reset to defaults (called on sign-out).
+  void reset() {
+    state = const ProgressModel();
+  }
+
   void completeLesson(String lessonId) {
     if (state.completedLessonIds.contains(lessonId)) return;
 

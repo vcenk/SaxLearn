@@ -5,6 +5,10 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../shared/widgets/gold_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/services/firestore_sync.dart';
+import '../../../data/repositories/progress_repository.dart';
+import '../../../data/repositories/user_repository.dart';
 import '../providers/onboarding_provider.dart';
 
 class GoalSelectScreen extends ConsumerWidget {
@@ -106,11 +110,30 @@ class GoalSelectScreen extends ConsumerWidget {
               GoldButton(
                 label: "Let's Go",
                 onPressed: selected != null
-                    ? () {
+                    ? () async {
                         ref
                             .read(onboardingProvider.notifier)
                             .completeOnboarding();
-                        context.go('/home');
+
+                        // If already authenticated, create/update user doc
+                        // in Firestore right now. Otherwise, it'll be
+                        // created after auth on the Auth screen.
+                        final auth = ref.read(authProvider);
+                        if (auth.isAuthenticated) {
+                          await createUserOnOnboardingComplete(
+                            auth: auth,
+                            onboarding: ref.read(onboardingProvider),
+                            userRepo: ref.read(userRepositoryProvider),
+                            progressRepo:
+                                ref.read(progressRepositoryProvider),
+                          );
+                          if (!context.mounted) return;
+                          context.go('/home');
+                        } else {
+                          // Route through auth so we get a uid before
+                          // writing to Firestore
+                          context.go('/auth');
+                        }
                       }
                     : () {},
               ),

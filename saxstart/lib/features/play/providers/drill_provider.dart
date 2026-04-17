@@ -24,6 +24,26 @@ class DrillState {
 class DrillNotifier extends StateNotifier<DrillState> {
   DrillNotifier() : super(const DrillState());
 
+  /// Replace state with drill history loaded from Firestore.
+  void hydrate(List<DrillResultModel> results) {
+    final bestScores = <String, int>{};
+    for (final r in results) {
+      final current = bestScores[r.drillType] ?? 0;
+      if (r.overallScore > current) {
+        bestScores[r.drillType] = r.overallScore;
+      }
+    }
+    state = DrillState(
+      bestScores: bestScores,
+      recentResults: results.take(20).toList(),
+    );
+  }
+
+  /// Reset to defaults (called on sign-out).
+  void reset() {
+    state = const DrillState();
+  }
+
   void addResult(DrillResultModel result) {
     final updatedRecent = [result, ...state.recentResults].take(20).toList();
     final updatedBest = Map<String, int>.from(state.bestScores);

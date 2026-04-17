@@ -9,6 +9,7 @@ import '../../../app/theme/app_typography.dart';
 import '../../../shared/widgets/gold_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/outline_button.dart';
+import '../../../core/services/pitch_detection_service.dart';
 import '../../../core/utils/score_calculator.dart';
 import '../../../data/models/drill_result_model.dart';
 import '../providers/drill_provider.dart';
@@ -34,6 +35,13 @@ class _DrillScreenState extends ConsumerState<DrillScreen>
   DrillPhase _phase = DrillPhase.ready;
   late AnimationController _pulseController;
   Timer? _listenTimer;
+
+  // Real pitch detection
+  PitchDetectionService? _pitchService;
+  StreamSubscription<PitchResult>? _pitchSub;
+  final List<double> _hzReadings = [];
+  DateTime? _listenStart;
+  DateTime? _firstDetection;
 
   // Score results
   int _overallScore = 0;
@@ -80,17 +88,51 @@ class _DrillScreenState extends ConsumerState<DrillScreen>
   void dispose() {
     _pulseController.dispose();
     _listenTimer?.cancel();
+    _pitchSub?.cancel();
+    _pitchService?.dispose();
     super.dispose();
   }
 
-  void _startListening() {
+  Future<void> _startListening() async {
     setState(() => _phase = DrillPhase.listening);
 
-    _listenTimer = Timer(Duration(seconds: _listenDuration), () {
-      _generateDemoScore();
+    // Reset capture state
+    _hzReadings.clear();
+    _listenStart = DateTime.now();
+    _firstDetection = null;
+
+    // Try to start real pitch detection
+    _pitchService = PitchDetectionService();
+    final started = await _pitchService!.start();
+
+    if (started) {
+      _pitchSub = _pitchService!.pitchStream.listen((result) {
+        // Filter out silence and out-of-range detections
+        if (result.isPitched &&
+            result.pitch > 50 &&
+            result.pitch < 4000 &&
+            result.probability > 0.8) {
+          _firstDetection ??= DateTime.now();
+          _hzReadings.add(result.pitch);
+        }
+      });
+    }
+
+    _listenTimer = Timer(Duration(seconds: _listenDuration), () async {
+      // Stop mic capture
+      await _pitchSub?.cancel();
+      _pitchSub = null;
+      await _pitchService?.stop();
+
+      // If we got real readings, score them. Otherwise fall back to demo.
+      if (_hzReadings.length >= 5) {
+        _computeRealScore();
+      } else {
+        _generateDemoScore();
+      }
+
       HapticFeedback.heavyImpact();
 
-      // Save result to provider
       ref.read(drillProvider.notifier).addResult(
             DrillResultModel(
               drillType: widget.drillType,
@@ -105,9 +147,67 @@ class _DrillScreenState extends ConsumerState<DrillScreen>
             ),
           );
 
+      if (!mounted) return;
       setState(() => _phase = DrillPhase.scored);
     });
   }
+
+  /// Compute scores from real captured Hz readings.
+  void _computeRealScore() {
+    // Median Hz from readings (more robust than mean)
+    final sorted = List<double>.from(_hzReadings)..sort();
+    final medianHz = sorted[sorted.length ~/ 2];
+
+    _pitchScore = ScoreCalculator.pitchScore(medianHz, widget.targetNote);
+
+    // Convert all readings to cents deviation from target for stability
+    final centsList = _hzReadings
+        .map((hz) =>
+            1200 * (log(hz / _targetHz()) / log(2)))
+        .toList();
+    _stabilityScore = ScoreCalculator.stabilityScore(centsList);
+
+    // Sustain: how much of the target duration was filled with pitched audio
+    final held = _hzReadings.length * 0.05; // ~20 Hz sample rate
+    _sustainScore =
+        ScoreCalculator.sustainScore(held, _listenDuration.toDouble());
+
+    // Attack: time from start to first detection
+    final attackSec = _firstDetection == null
+        ? 1.5
+        : _firstDetection!.difference(_listenStart!).inMilliseconds / 1000.0;
+    _attackScore = ScoreCalculator.attackScore(attackSec);
+
+    _overallScore = ScoreCalculator.overallScore(
+      pitch: _pitchScore,
+      stability: _stabilityScore,
+      sustain: _sustainScore,
+      attack: _attackScore,
+    );
+
+    // Pick feedback from the weakest component
+    final scores = {
+      'pitch': _pitchScore,
+      'stability': _stabilityScore,
+      'sustain': _sustainScore,
+    };
+    final weakest =
+        scores.entries.reduce((a, b) => a.value < b.value ? a : b);
+    switch (weakest.key) {
+      case 'pitch':
+        _feedback = ScoreCalculator.pitchFeedback(_pitchScore);
+        break;
+      case 'stability':
+        _feedback = ScoreCalculator.stabilityFeedback(_stabilityScore);
+        break;
+      case 'sustain':
+        _feedback = ScoreCalculator.sustainFeedback(_sustainScore);
+        break;
+    }
+  }
+
+  double _targetHz() =>
+      ScoreCalculator.noteFrequencies[widget.targetNote] ?? 440.0;
 
   void _generateDemoScore() {
     final rng = Random();

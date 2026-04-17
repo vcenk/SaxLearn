@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../core/services/pitch_detection_service.dart';
 import '../../../core/utils/score_calculator.dart';
 
 enum TunerStatus { idle, listening, permissionDenied }
@@ -38,6 +40,9 @@ class TunerState {
 }
 
 class TunerNotifier extends StateNotifier<TunerState> {
+  final PitchDetectionService _service = PitchDetectionService();
+  StreamSubscription<PitchResult>? _sub;
+
   TunerNotifier() : super(const TunerState());
 
   bool get isListening => state.status == TunerStatus.listening;
@@ -57,34 +62,46 @@ class TunerNotifier extends StateNotifier<TunerState> {
       statusText: 'Listening...',
     );
 
-    // TODO: Integrate pitch_detector_dart for real pitch detection
-    // For now, the tuner UI is ready and permission flow works.
-    // On real device, replace this with:
-    //   _detector = PitchDetector(audioSampleRate: 44100, bufferSize: 2048);
-    //   _subscription = _detector.pitchStream.listen((result) { ... });
-    //   await _detector.start();
+    final started = await _service.start();
+    if (!started) {
+      state = state.copyWith(
+        status: TunerStatus.idle,
+        statusText: 'Could not access microphone',
+      );
+      return;
+    }
+
+    _sub = _service.pitchStream.listen((result) {
+      if (result.isPitched && result.pitch > 50 && result.pitch < 4000) {
+        processHz(result.pitch);
+      }
+    });
   }
 
-  void stopListening() {
-    // TODO: Stop pitch detector stream
+  Future<void> stopListening() async {
+    await _sub?.cancel();
+    _sub = null;
+    await _service.stop();
     state = const TunerState();
   }
 
-  void toggle() {
+  Future<void> toggle() async {
     if (isListening) {
-      stopListening();
+      await stopListening();
     } else {
-      startListening();
+      await startListening();
     }
   }
 
-  /// Process a detected Hz value into note name and cents deviation
+  /// Process a detected Hz value into note name and cents deviation.
   void processHz(double hz) {
     if (hz <= 0) return;
 
     final noteName = hzToNoteName(hz);
-    final noteKey = '$noteName${_octaveFromHz(hz)}';
-    final targetHz = ScoreCalculator.noteFrequencies[noteKey] ?? _closestFreq(hz);
+    final octave = _octaveFromHz(hz);
+    final noteKey = '$noteName$octave';
+    final targetHz =
+        ScoreCalculator.noteFrequencies[noteKey] ?? _closestFreq(hz);
     final cents = 1200 * log(hz / targetHz) / log(2);
 
     String statusText;
@@ -102,6 +119,13 @@ class TunerNotifier extends StateNotifier<TunerState> {
       centsDeviation: cents,
       statusText: statusText,
     );
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _service.dispose();
+    super.dispose();
   }
 
   static String hzToNoteName(double hz) {
