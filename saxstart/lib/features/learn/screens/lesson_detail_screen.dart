@@ -9,6 +9,7 @@ import '../../../shared/widgets/badge_chip.dart';
 import '../../../features/learn/providers/lesson_provider.dart';
 import '../../../features/progress/providers/progress_provider.dart';
 import '../../../data/local_content/fingering_chart_data.dart';
+import '../../../core/services/note_player_service.dart';
 
 class LessonDetailScreen extends ConsumerWidget {
   final String moduleId;
@@ -115,6 +116,35 @@ class LessonDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(fingeringNote.tip, style: AppTypography.bodySmall),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: () =>
+                          NotePlayerService().playNote(fingeringNote.name),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.volume_up_rounded,
+                                color: AppColors.gold, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Play Sample',
+                              style: AppTypography.bodyMedium
+                                  .copyWith(color: AppColors.gold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

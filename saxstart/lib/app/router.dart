@@ -10,6 +10,8 @@ import '../features/play/screens/play_screen.dart';
 import '../features/play/screens/drill_screen.dart';
 import '../features/tools/screens/tools_screen.dart';
 import '../features/progress/screens/progress_screen.dart';
+import '../features/settings/screens/settings_screen.dart';
+import '../features/auth/screens/auth_screen.dart';
 import '../shared/widgets/main_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -31,6 +33,14 @@ final router = GoRouter(
     GoRoute(
       path: '/onboarding/goal',
       builder: (context, state) => const GoalSelectScreen(),
+    ),
+    GoRoute(
+      path: '/auth',
+      builder: (context, state) => const AuthScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
 
     // Main app shell with bottom navigation

@@ -1,32 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../shared/widgets/gold_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../data/local_content/fingering_chart_data.dart';
+import '../../../core/services/note_player_service.dart';
+import '../metronome/metronome_provider.dart';
 
-class ToolsScreen extends StatefulWidget {
+class ToolsScreen extends ConsumerStatefulWidget {
   const ToolsScreen({super.key});
 
   @override
-  State<ToolsScreen> createState() => _ToolsScreenState();
+  ConsumerState<ToolsScreen> createState() => _ToolsScreenState();
 }
 
-class _ToolsScreenState extends State<ToolsScreen> {
-  // Tuner state
+class _ToolsScreenState extends ConsumerState<ToolsScreen> {
+  // Tuner state (local until pitch_detector integration)
   bool _tunerActive = false;
   String _detectedNote = '--';
   String _tunerStatus = 'Tap to start';
 
-  // Metronome state
-  int _bpm = 80;
-  bool _metronomeActive = false;
-
   // Fingering state
   int _selectedNoteIndex = 0;
+  final _notePlayer = NotePlayerService();
+
+  @override
+  void dispose() {
+    _notePlayer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final metro = ref.watch(metronomeProvider);
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -44,10 +52,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
               AppCard(
                 child: Column(
                   children: [
-                    Text(
-                      _detectedNote,
-                      style: AppTypography.displayLarge,
-                    ),
+                    Text(_detectedNote, style: AppTypography.displayLarge),
                     const SizedBox(height: 8),
                     Text(
                       _tunerStatus,
@@ -111,7 +116,7 @@ class _ToolsScreenState extends State<ToolsScreen> {
                 child: Column(
                   children: [
                     Text(
-                      '$_bpm',
+                      '${metro.bpm}',
                       style: AppTypography.displayLarge,
                     ),
                     Text('BPM', style: AppTypography.bodySmall),
@@ -119,12 +124,12 @@ class _ToolsScreenState extends State<ToolsScreen> {
 
                     // Beat indicator
                     AnimatedContainer(
-                      duration: const Duration(milliseconds: 100),
+                      duration: const Duration(milliseconds: 80),
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _metronomeActive
+                        color: metro.beatFlash
                             ? AppColors.gold
                             : AppColors.surfaceElevated,
                         border: Border.all(
@@ -139,9 +144,11 @@ class _ToolsScreenState extends State<ToolsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [60, 80, 100, 120].map((bpm) {
-                        final isSelected = _bpm == bpm;
+                        final isSelected = metro.bpm == bpm;
                         return GestureDetector(
-                          onTap: () => setState(() => _bpm = bpm),
+                          onTap: () => ref
+                              .read(metronomeProvider.notifier)
+                              .setBpm(bpm),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
@@ -177,18 +184,19 @@ class _ToolsScreenState extends State<ToolsScreen> {
                         overlayColor: AppColors.gold.withValues(alpha: 0.2),
                       ),
                       child: Slider(
-                        value: _bpm.toDouble(),
+                        value: metro.bpm.toDouble(),
                         min: 40,
                         max: 200,
-                        onChanged: (v) => setState(() => _bpm = v.round()),
+                        onChanged: (v) => ref
+                            .read(metronomeProvider.notifier)
+                            .setBpm(v.round()),
                       ),
                     ),
                     const SizedBox(height: 8),
                     GoldButton(
-                      label: _metronomeActive ? 'Stop' : 'Start',
-                      onPressed: () {
-                        setState(() => _metronomeActive = !_metronomeActive);
-                      },
+                      label: metro.isPlaying ? 'Stop' : 'Start',
+                      onPressed: () =>
+                          ref.read(metronomeProvider.notifier).toggle(),
                     ),
                   ],
                 ),
@@ -208,31 +216,40 @@ class _ToolsScreenState extends State<ToolsScreen> {
                   itemBuilder: (context, i) {
                     final note = beginnerNotes[i];
                     final isSelected = _selectedNoteIndex == i;
+                    final isLocked = note.isPremium;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
-                        onTap: () => setState(() => _selectedNoteIndex = i),
+                        onTap: isLocked
+                            ? null
+                            : () => setState(() => _selectedNoteIndex = i),
                         child: Container(
                           width: 44,
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? AppColors.gold
-                                : AppColors.surfaceElevated,
+                                : isLocked
+                                    ? AppColors.surfaceElevated
+                                        .withValues(alpha: 0.5)
+                                    : AppColors.surfaceElevated,
                             borderRadius: BorderRadius.circular(12),
                             border: isSelected
                                 ? null
                                 : Border.all(color: AppColors.borderGold),
                           ),
                           child: Center(
-                            child: Text(
-                              note.name,
-                              style: AppTypography.bodyLarge.copyWith(
-                                color: isSelected
-                                    ? const Color(0xFF1A0F00)
-                                    : AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            child: isLocked
+                                ? const Icon(Icons.lock_rounded,
+                                    color: AppColors.textDisabled, size: 16)
+                                : Text(
+                                    note.name,
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      color: isSelected
+                                          ? const Color(0xFF1A0F00)
+                                          : AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -260,7 +277,8 @@ class _ToolsScreenState extends State<ToolsScreen> {
                           final pressed =
                               beginnerNotes[_selectedNoteIndex].keys[i];
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
                             child: Container(
                               width: 36,
                               height: 36,
@@ -285,7 +303,8 @@ class _ToolsScreenState extends State<ToolsScreen> {
                           final pressed =
                               beginnerNotes[_selectedNoteIndex].keys[i + 3];
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 8),
                             child: Container(
                               width: 36,
                               height: 36,
@@ -320,6 +339,37 @@ class _ToolsScreenState extends State<ToolsScreen> {
                       beginnerNotes[_selectedNoteIndex].tip,
                       style: AppTypography.bodySmall,
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    // Play note button
+                    GestureDetector(
+                      onTap: () => _notePlayer.playNote(
+                        beginnerNotes[_selectedNoteIndex].name,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.volume_up_rounded,
+                                color: AppColors.gold, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Play Note',
+                              style: AppTypography.bodyMedium
+                                  .copyWith(color: AppColors.gold),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),

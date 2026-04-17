@@ -47,11 +47,33 @@ class HomeScreen extends ConsumerWidget {
                           style: AppTypography.displaySmall),
                     ],
                   ),
-                  if (progress.currentStreak > 0)
-                    BadgeChip(
-                      label: '${progress.currentStreak} day streak',
-                      type: BadgeType.gold,
-                    ),
+                  Row(
+                    children: [
+                      if (progress.currentStreak > 0)
+                        BadgeChip(
+                          label: '${progress.currentStreak} day streak',
+                          type: BadgeType.gold,
+                        ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => context.push('/settings'),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.borderGold),
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.textSecondary,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 24),

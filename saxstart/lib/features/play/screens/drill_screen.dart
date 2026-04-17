@@ -283,11 +283,16 @@ class _ScoreBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: AppTypography.bodyMedium),
-            Text(
-              '$score',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.gold,
-                fontWeight: FontWeight.w600,
+            TweenAnimationBuilder<int>(
+              tween: IntTween(begin: 0, end: score),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => Text(
+                '$value',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -299,18 +304,23 @@ class _ScoreBar extends StatelessWidget {
             color: AppColors.surfaceElevated,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: score / 100,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    score >= 70 ? AppColors.gold : AppColors.warning,
-                    score >= 70 ? AppColors.goldLight : AppColors.error,
-                  ],
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: score / 100),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) => FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: value,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      score >= 70 ? AppColors.gold : AppColors.warning,
+                      score >= 70 ? AppColors.goldLight : AppColors.error,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                borderRadius: BorderRadius.circular(4),
               ),
             ),
           ),

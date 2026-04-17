@@ -134,7 +134,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => context.go('/home'),
+                onPressed: () => context.push('/auth'),
                 child: Text(
                   'Sign In',
                   style: AppTypography.bodyMedium.copyWith(
