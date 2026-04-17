@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/badge_chip.dart';
+import '../providers/drill_provider.dart';
 
-class PlayScreen extends StatelessWidget {
+class PlayScreen extends ConsumerWidget {
   const PlayScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final drillState = ref.watch(drillProvider);
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -67,11 +70,20 @@ class PlayScreen extends StatelessWidget {
               AppCard(
                 child: Column(
                   children: [
-                    _ScoreRow(drill: 'Tune the Note', score: '--'),
+                    _ScoreRow(
+                      drill: 'Tune the Note',
+                      score: drillState.bestScores['tune']?.toString() ?? '--',
+                    ),
                     const Divider(color: AppColors.borderSubtle, height: 24),
-                    _ScoreRow(drill: 'Hold It Steady', score: '--'),
+                    _ScoreRow(
+                      drill: 'Hold It Steady',
+                      score: drillState.bestScores['hold']?.toString() ?? '--',
+                    ),
                     const Divider(color: AppColors.borderSubtle, height: 24),
-                    _ScoreRow(drill: 'Follow the Pattern', score: '--'),
+                    _ScoreRow(
+                      drill: 'Follow the Pattern',
+                      score: drillState.bestScores['pattern']?.toString() ?? '--',
+                    ),
                   ],
                 ),
               ),

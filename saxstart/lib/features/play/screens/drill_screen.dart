@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
@@ -8,10 +10,12 @@ import '../../../shared/widgets/gold_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/outline_button.dart';
 import '../../../core/utils/score_calculator.dart';
+import '../../../data/models/drill_result_model.dart';
+import '../providers/drill_provider.dart';
 
 enum DrillPhase { ready, listening, scored }
 
-class DrillScreen extends StatefulWidget {
+class DrillScreen extends ConsumerStatefulWidget {
   final String drillType;
   final String targetNote;
 
@@ -22,10 +26,10 @@ class DrillScreen extends StatefulWidget {
   });
 
   @override
-  State<DrillScreen> createState() => _DrillScreenState();
+  ConsumerState<DrillScreen> createState() => _DrillScreenState();
 }
 
-class _DrillScreenState extends State<DrillScreen>
+class _DrillScreenState extends ConsumerState<DrillScreen>
     with SingleTickerProviderStateMixin {
   DrillPhase _phase = DrillPhase.ready;
   late AnimationController _pulseController;
@@ -84,6 +88,23 @@ class _DrillScreenState extends State<DrillScreen>
 
     _listenTimer = Timer(Duration(seconds: _listenDuration), () {
       _generateDemoScore();
+      HapticFeedback.heavyImpact();
+
+      // Save result to provider
+      ref.read(drillProvider.notifier).addResult(
+            DrillResultModel(
+              drillType: widget.drillType,
+              targetNote: widget.targetNote,
+              overallScore: _overallScore,
+              pitchScore: _pitchScore,
+              stabilityScore: _stabilityScore,
+              sustainScore: _sustainScore,
+              attackScore: _attackScore,
+              feedback: _feedback,
+              attemptedAt: DateTime.now(),
+            ),
+          );
+
       setState(() => _phase = DrillPhase.scored);
     });
   }

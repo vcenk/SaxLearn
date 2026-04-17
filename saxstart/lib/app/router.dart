@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../features/onboarding/screens/splash_screen.dart';
 import '../features/onboarding/screens/welcome_screen.dart';
 import '../features/onboarding/screens/level_select_screen.dart';
 import '../features/onboarding/screens/goal_select_screen.dart';
@@ -19,8 +20,14 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final router = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/welcome',
+  initialLocation: '/splash',
   routes: [
+    // Splash
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) => const SplashScreen(),
+    ),
+
     // Onboarding routes (no bottom nav)
     GoRoute(
       path: '/welcome',

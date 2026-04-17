@@ -7,6 +7,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../data/local_content/fingering_chart_data.dart';
 import '../../../core/services/note_player_service.dart';
 import '../metronome/metronome_provider.dart';
+import '../tuner/tuner_provider.dart';
 
 class ToolsScreen extends ConsumerStatefulWidget {
   const ToolsScreen({super.key});
@@ -16,11 +17,6 @@ class ToolsScreen extends ConsumerStatefulWidget {
 }
 
 class _ToolsScreenState extends ConsumerState<ToolsScreen> {
-  // Tuner state (local until pitch_detector integration)
-  bool _tunerActive = false;
-  String _detectedNote = '--';
-  String _tunerStatus = 'Tap to start';
-
   // Fingering state
   int _selectedNoteIndex = 0;
   final _notePlayer = NotePlayerService();
@@ -34,6 +30,7 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
   @override
   Widget build(BuildContext context) {
     final metro = ref.watch(metronomeProvider);
+    final tuner = ref.watch(tunerProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -52,57 +49,83 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
               AppCard(
                 child: Column(
                   children: [
-                    Text(_detectedNote, style: AppTypography.displayLarge),
+                    Text(tuner.detectedNote,
+                        style: AppTypography.displayLarge),
                     const SizedBox(height: 8),
                     Text(
-                      _tunerStatus,
+                      tuner.statusText,
                       style: AppTypography.bodyMedium.copyWith(
-                        color: _tunerStatus == 'In tune'
+                        color: tuner.statusText == 'In tune'
                             ? AppColors.success
-                            : AppColors.textSecondary,
+                            : tuner.status == TunerStatus.permissionDenied
+                                ? AppColors.error
+                                : AppColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 16),
                     // Tuning meter
-                    Container(
-                      height: 12,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        gradient: const LinearGradient(
-                          colors: [
-                            AppColors.error,
-                            AppColors.warning,
-                            AppColors.success,
-                            AppColors.warning,
-                            AppColors.error,
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 4,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: AppColors.cream,
-                            borderRadius: BorderRadius.circular(2),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final width = constraints.maxWidth;
+                        // Map cents (-50 to +50) to position (0 to width)
+                        final cents = tuner.centsDeviation.clamp(-50.0, 50.0);
+                        final needlePos =
+                            (width / 2) + (cents / 50 * width / 2);
+
+                        return SizedBox(
+                          height: 24,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Positioned.fill(
+                                child: Container(
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        AppColors.error,
+                                        AppColors.warning,
+                                        AppColors.success,
+                                        AppColors.warning,
+                                        AppColors.error,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              AnimatedPositioned(
+                                duration: const Duration(milliseconds: 150),
+                                left: needlePos - 2,
+                                top: -2,
+                                child: Container(
+                                  width: 4,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cream,
+                                    borderRadius: BorderRadius.circular(2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.cream
+                                            .withValues(alpha: 0.5),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                     GoldButton(
-                      label: _tunerActive ? 'Stop Listening' : 'Start Listening',
-                      onPressed: () {
-                        setState(() {
-                          _tunerActive = !_tunerActive;
-                          if (!_tunerActive) {
-                            _detectedNote = '--';
-                            _tunerStatus = 'Tap to start';
-                          } else {
-                            _tunerStatus = 'Listening...';
-                          }
-                        });
-                      },
+                      label: tuner.status == TunerStatus.listening
+                          ? 'Stop Listening'
+                          : 'Start Listening',
+                      onPressed: () =>
+                          ref.read(tunerProvider.notifier).toggle(),
                     ),
                   ],
                 ),
