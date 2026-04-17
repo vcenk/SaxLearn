@@ -1,58 +1,89 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/progress_model.dart';
 import '../../data/models/practice_session_model.dart';
 import '../../data/models/drill_result_model.dart';
 
-/// Firestore service abstraction
-/// TODO: Replace with real Cloud Firestore when Firebase is configured
+/// Cloud Firestore service. Uses the schema defined in 04_DATABASE_SCHEMA.md.
 class FirestoreService {
-  // In-memory storage for development
-  final Map<String, Map<String, dynamic>> _users = {};
-  final Map<String, Map<String, dynamic>> _progress = {};
-  final Map<String, List<Map<String, dynamic>>> _sessions = {};
-  final Map<String, List<Map<String, dynamic>>> _drillScores = {};
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // User operations
+  // User operations -----------------------------------------------------------
+  DocumentReference<Map<String, dynamic>> _userDoc(String uid) =>
+      _db.collection('users').doc(uid);
+
   Future<void> createUser(UserModel user) async {
-    _users[user.id] = user.toMap();
+    await _userDoc(user.id).set(user.toMap());
   }
 
   Future<UserModel?> getUser(String uid) async {
-    final data = _users[uid];
+    final snap = await _userDoc(uid).get();
+    if (!snap.exists) return null;
+    final data = snap.data();
     if (data == null) return null;
-    return UserModel.fromMap(data);
+    return UserModel.fromMap({...data, 'id': uid});
   }
 
   Future<void> updateUser(UserModel user) async {
-    _users[user.id] = user.toMap();
+    await _userDoc(user.id).update(user.toMap());
   }
 
-  // Progress operations
+  Stream<UserModel?> watchUser(String uid) {
+    return _userDoc(uid).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      final data = snap.data();
+      if (data == null) return null;
+      return UserModel.fromMap({...data, 'id': uid});
+    });
+  }
+
+  // Progress operations -------------------------------------------------------
+  DocumentReference<Map<String, dynamic>> _progressDoc(String uid) =>
+      _userDoc(uid).collection('progress').doc('summary');
+
   Future<void> updateProgress(String uid, ProgressModel progress) async {
-    _progress[uid] = progress.toMap();
+    await _progressDoc(uid).set(progress.toMap());
   }
 
   Future<ProgressModel?> getProgress(String uid) async {
-    final data = _progress[uid];
+    final snap = await _progressDoc(uid).get();
+    if (!snap.exists) return null;
+    final data = snap.data();
     if (data == null) return null;
     return ProgressModel.fromMap(data);
   }
 
-  // Session operations
+  Stream<ProgressModel?> watchProgress(String uid) {
+    return _progressDoc(uid).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      final data = snap.data();
+      if (data == null) return null;
+      return ProgressModel.fromMap(data);
+    });
+  }
+
+  // Session operations --------------------------------------------------------
   Future<void> saveSession(String uid, PracticeSessionModel session) async {
-    _sessions.putIfAbsent(uid, () => []);
-    _sessions[uid]!.add(session.toMap());
+    await _userDoc(uid)
+        .collection('sessions')
+        .doc(session.id)
+        .set(session.toMap());
   }
 
-  // Drill score operations
+  // Drill score operations ----------------------------------------------------
   Future<void> saveDrillResult(String uid, DrillResultModel result) async {
-    _drillScores.putIfAbsent(uid, () => []);
-    _drillScores[uid]!.add(result.toMap());
+    await _userDoc(uid).collection('drill_scores').add(result.toMap());
   }
 
-  Future<List<DrillResultModel>> getDrillScores(String uid) async {
-    final data = _drillScores[uid];
-    if (data == null) return [];
-    return data.map((d) => DrillResultModel.fromMap(d)).toList();
+  Future<List<DrillResultModel>> getDrillScores(String uid,
+      {int limit = 50}) async {
+    final snap = await _userDoc(uid)
+        .collection('drill_scores')
+        .orderBy('attemptedAt', descending: true)
+        .limit(limit)
+        .get();
+    return snap.docs
+        .map((d) => DrillResultModel.fromMap(d.data()))
+        .toList();
   }
 }

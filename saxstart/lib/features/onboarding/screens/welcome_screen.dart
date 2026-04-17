@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../shared/widgets/gold_button.dart';
+import '../../../shared/widgets/saxophone_illustration.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -47,21 +48,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              const SizedBox(height: 60),
-              // Logo area
-              Icon(
-                Icons.music_note_rounded,
-                size: 64,
-                color: AppColors.gold,
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 32),
+              // Logo: saxophone illustration
+              const SaxophoneIllustration(size: 100, showGlow: false),
+              const SizedBox(height: 8),
               Text('SaxStart', style: AppTypography.displayMedium),
               const SizedBox(height: 4),
               Text(
                 'Learn saxophone step by step',
                 style: AppTypography.bodySmall,
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 24),
 
               // Carousel
               Expanded(
@@ -74,19 +71,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
+                        if (index == 0)
+                          const SaxophoneIllustration(size: 180)
+                        else
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              slide.icon,
+                              size: 56,
+                              color: AppColors.gold,
+                            ),
                           ),
-                          child: Icon(
-                            slide.icon,
-                            size: 56,
-                            color: AppColors.gold,
-                          ),
-                        ),
                         const SizedBox(height: 32),
                         Text(
                           slide.title,

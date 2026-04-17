@@ -5,6 +5,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/gold_button.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../features/onboarding/providers/onboarding_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -21,6 +22,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final onboarding = ref.watch(onboardingProvider);
+    final auth = ref.watch(authProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -56,13 +58,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text('Saxophonist',
+                  Text(
+                      auth.displayName ?? 'Saxophonist',
                       style: AppTypography.displaySmall.copyWith(fontSize: 20)),
                   const SizedBox(height: 4),
                   Text(
-                    _levelLabel(onboarding.level),
+                    auth.email ?? _levelLabel(onboarding.level),
                     style: AppTypography.bodySmall,
                   ),
+                  if (auth.isGuest) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Guest account',
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.gold),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -223,7 +234,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.logout_rounded,
                     label: 'Sign Out',
-                    onTap: () => context.go('/welcome'),
+                    onTap: () async {
+                      await ref.read(authProvider.notifier).signOut();
+                      if (context.mounted) context.go('/welcome');
+                    },
                     isDestructive: true,
                   ),
                 ],

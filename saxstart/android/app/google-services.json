@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "348118859950",
+    "project_id": "saxstart-dev",
+    "storage_bucket": "saxstart-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:348118859950:android:fb58aa5389b1de8f63ad3f",
+        "android_client_info": {
+          "package_name": "com.saxstart.saxstart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "348118859950-hq306smd076usjv29b377rglhtmpih50.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDka9RIMeu_8KX-cTa49-ge2ftmQBiyDy8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "348118859950-hq306smd076usjv29b377rglhtmpih50.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

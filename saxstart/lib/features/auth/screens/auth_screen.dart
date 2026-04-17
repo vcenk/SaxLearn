@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../shared/widgets/gold_button.dart';
 
-class AuthScreen extends StatefulWidget {
+class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSignUp = true;
@@ -77,17 +79,61 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Error message
+              if (ref.watch(authProvider).errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          color: AppColors.error, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ref.watch(authProvider).errorMessage!,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Submit button
               GoldButton(
                 label: _isSignUp ? 'Sign Up' : 'Sign In',
                 isLoading: _isLoading,
                 onPressed: () async {
-                  // TODO: Firebase auth integration
+                  final email = _emailController.text.trim();
+                  final password = _passwordController.text;
+
+                  if (email.isEmpty || password.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please enter email and password'),
+                      ),
+                    );
+                    return;
+                  }
+
                   setState(() => _isLoading = true);
-                  await Future.delayed(const Duration(seconds: 1));
+                  final notifier = ref.read(authProvider.notifier);
+                  final ok = _isSignUp
+                      ? await notifier.signUpWithEmail(email, password)
+                      : await notifier.signInWithEmail(email, password);
                   if (!context.mounted) return;
                   setState(() => _isLoading = false);
-                  context.go('/home');
+                  if (ok) context.go('/home');
                 },
               ),
               const SizedBox(height: 16),
@@ -129,22 +175,35 @@ class _AuthScreenState extends State<AuthScreen> {
               _SocialButton(
                 icon: Icons.g_mobiledata_rounded,
                 label: 'Continue with Google',
-                onTap: () => context.go('/home'),
+                onTap: () async {
+                  final ok =
+                      await ref.read(authProvider.notifier).signInWithGoogle();
+                  if (ok && context.mounted) context.go('/home');
+                },
               ),
               const SizedBox(height: 12),
               _SocialButton(
                 icon: Icons.apple_rounded,
                 label: 'Continue with Apple',
-                onTap: () => context.go('/home'),
+                onTap: () async {
+                  final ok =
+                      await ref.read(authProvider.notifier).signInWithApple();
+                  if (ok && context.mounted) context.go('/home');
+                },
               ),
               const SizedBox(height: 24),
 
-              // Skip
+              // Skip (guest mode)
               Center(
                 child: TextButton(
-                  onPressed: () => context.go('/home'),
+                  onPressed: () async {
+                    final ok = await ref
+                        .read(authProvider.notifier)
+                        .continueAsGuest();
+                    if (ok && context.mounted) context.go('/home');
+                  },
                   child: Text(
-                    'Skip for now',
+                    'Continue as guest',
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textDisabled,
                     ),

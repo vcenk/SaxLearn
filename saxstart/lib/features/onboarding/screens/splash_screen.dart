@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../shared/widgets/saxophone_illustration.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -68,28 +69,9 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo icon
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.gold,
-                            AppColors.goldLight,
-                          ],
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: Color(0xFF1A0F00),
-                        size: 48,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    // Saxophone logo illustration
+                    const SaxophoneIllustration(size: 180),
+                    const SizedBox(height: 16),
                     Text(
                       'SaxStart',
                       style: AppTypography.displayMedium.copyWith(
